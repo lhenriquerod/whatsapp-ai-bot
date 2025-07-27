@@ -1,13 +1,15 @@
+import os
 import requests
-from src.utils.config import WHATSAPP_TOKEN, WHATSAPP_PHONE_ID
 
 class WhatsAppService:
-    BASE_URL = "https://graph.facebook.com/v18.0"
+    def __init__(self):
+        self.token = os.getenv("WHATSAPP_TOKEN")
+        self.phone_id = os.getenv("WHATSAPP_PHONE_ID")
 
-    def send_message(self, to: str, message: str):
-        url = f"{self.BASE_URL}/{WHATSAPP_PHONE_ID}/messages"
+    def send_message(self, to, message):
+        url = f"https://graph.facebook.com/v18.0/{self.phone_id}/messages"
         headers = {
-            "Authorization": f"Bearer {WHATSAPP_TOKEN}",
+            "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json"
         }
         data = {
@@ -16,5 +18,10 @@ class WhatsAppService:
             "type": "text",
             "text": {"body": message}
         }
-        response = requests.post(url, headers=headers, json=data)
-        return response.json()
+
+        try:
+            response = requests.post(url, headers=headers, json=data)
+            print(f"📤 Mensagem enviada para {to}: {message}")
+            print(f"✅ Resposta da API:", response.json())
+        except Exception as e:
+            print(f"❌ Erro ao enviar mensagem: {e}")
