@@ -16,7 +16,7 @@ OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
-# ✅ ÚNICA rota para GET e POST
+# ✅ Webhook: Recebe mensagens do WhatsApp
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
     if request.method == "GET":
@@ -40,10 +40,10 @@ def webhook():
                         text = messages[0].get("text", {}).get("body")
 
                         if text:
-                            # ✅ Obter resposta da IA
+                            # ✅ Chama GPT-4o Mini
                             response_text = get_gpt_response(text)
 
-                            # ✅ Enviar mensagem pelo WhatsApp
+                            # ✅ Envia resposta pelo WhatsApp
                             send_message(from_number, response_text)
 
         return "EVENT_RECEIVED", 200
@@ -51,7 +51,7 @@ def webhook():
 def get_gpt_response(user_text):
     response = client.responses.create(
         model="gpt-4o-mini",
-        input=f"O usuário disse: {user_text}. Responda de forma simples e amigável."
+        input=f"O usuário disse: {user_text}. Responda de forma simples, clara e amigável."
     )
     return response.output_text
 
