@@ -8,11 +8,14 @@ class AIService:
     def generate_response(self, text):
         try:
             print(f"🤖 Chamando GPT para: {text}")
-            response = self.client.responses.create(
+            response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
-                input=f"O usuário disse: {text}. Responda de forma clara e amigável."
+                messages=[
+                    {"role": "system", "content": "Você é um assistente útil."},
+                    {"role": "user", "content": text}
+                ]
             )
-            return response.output_text
+            return response.choices[0].message.content
         except Exception as e:
             print(f"❌ Erro ao gerar resposta: {e}")
             return "Desculpe, não consegui responder agora."
