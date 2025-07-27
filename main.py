@@ -19,33 +19,37 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 # ✅ Webhook: Recebe mensagens do WhatsApp
 @app.route("/webhook", methods=["GET", "POST"])
 def webhook():
-    if request.method == "GET":
-        token = request.args.get("hub.verify_token")
-        challenge = request.args.get("hub.challenge")
-        if token == VERIFY_TOKEN:
-            return challenge, 200
-        return "Invalid token", 403
+    try:
+        if request.method == "GET":
+            token = request.args.get("hub.verify_token")
+            challenge = request.args.get("hub.challenge")
+            if token == VERIFY_TOKEN:
+                return challenge, 200
+            return "Invalid token", 403
 
-    elif request.method == "POST":
-        data = request.get_json()
-        print("Recebido:", data)
+        elif request.method == "POST":
+            print("RAW DATA:", request.data)
+            data = request.get_json()
+            print("PARSED JSON:", data)
 
-        if data.get("object") == "whatsapp_business_account":
-            for entry in data.get("entry", []):
-                for change in entry.get("changes", []):
-                    value = change.get("value", {})
-                    messages = value.get("messages", [])
-                    if messages:
-                        from_number = messages[0]["from"]
-                        text = messages[0].get("text", {}).get("body")
+            if data.get("object") == "whatsapp_business_account":
+                for entry in data.get("entry", []):
+                    for change in entry.get("changes", []):
+                        value = change.get("value", {})
+                        messages = value.get("messages", [])
+                        if messages:
+                            from_number = messages[0].get("from")
+                            text = messages[0].get("text", {}).get("body", "")
 
-                        if text:
-                            # ✅ Chama GPT-4o Mini
-                            response_text = get_gpt_response(text)
+                            if text:
+                                print(f"Mensagem recebida: {text}")
+                                response_text = get_gpt_response(text)
+                                send_message(from_number, response_text)
 
-                            # ✅ Envia resposta pelo WhatsApp
-                            send_message(from_number, response_text)
+            return "EVENT_RECEIVED", 200
 
+    except Exception as e:
+        print("Erro no webhook:", e)
         return "EVENT_RECEIVED", 200
 
 def get_gpt_response(user_text):
