@@ -1,5 +1,9 @@
 import os
 from openai import OpenAI
+from dotenv import load_dotenv
+
+# ✅ Carrega variáveis do .env
+load_dotenv()
 
 class AIService:
     def __init__(self):
