@@ -1,32 +1,27 @@
+"""
+Configuration module for RAG-E Chat Service.
+Loads environment variables with sensible defaults.
+"""
 import os
 from dotenv import load_dotenv
 
 # Load .env once at process start
 load_dotenv()
 
-# Core / server
-PORT = int(os.getenv("PORT", "5000"))
-ENV = os.getenv("ENV", "development")  # development|production
+# Server configuration
+PORT = int(os.getenv("PORT", "8000"))
 
-# Meta / WhatsApp
-VERIFY_TOKEN = os.getenv("VERIFY_TOKEN", "")
-APP_SECRET = os.getenv("APP_SECRET", "")  # used for X-Hub-Signature-256
-WHATSAPP_TOKEN = os.getenv("WHATSAPP_TOKEN", "")
-WHATSAPP_PHONE_ID = os.getenv("WHATSAPP_PHONE_ID", "")
-FB_GRAPH_VERSION = os.getenv("FB_GRAPH_VERSION", "v18.0")
+# Supabase configuration
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_ANON_KEY", "")
 
-# OpenAI
+# OpenAI configuration
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.4"))
+OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.2"))
 
-# Redis (optional but recommended for scaling and idempotency)
-REDIS_URL = os.getenv("REDIS_URL", "")  # e.g., redis://localhost:6379/0
-
-# App behavior
-SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "Você é um assistente útil e direto.")
-RESPONSE_FALLBACK = os.getenv("RESPONSE_FALLBACK", "Desculpe, tive um problema ao responder agora. Tente novamente em instantes.")
-MAX_HISTORY_MESSAGES = int(os.getenv("MAX_HISTORY_MESSAGES", "20"))
-IDEMPOTENCY_TTL_SECONDS = int(os.getenv("IDEMPOTENCY_TTL_SECONDS", "3600"))
-REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "15"))
-RETRY_MAX_ATTEMPTS = int(os.getenv("RETRY_MAX_ATTEMPTS", "3"))
+# Knowledge Base (Supabase table) configuration
+KB_TABLE = os.getenv("KB_TABLE", "base_conhecimento")
+KB_OWNER_COL = os.getenv("KB_OWNER_COL", "user_id")
+KB_FIELDS = os.getenv("KB_FIELDS", "categoria,dados")
+KB_LIMIT = int(os.getenv("KB_LIMIT", "100"))  # Fetch all entries (increased from 10)

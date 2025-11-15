@@ -6,14 +6,15 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-# dependências
+# Install dependencies
 COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# código
+# Copy application code
 COPY . .
 
-# recomendações gunicorn
-ENV GUNICORN_CMD_ARGS="--bind=0.0.0.0:${PORT:-5000} --workers=2 --threads=4 --timeout=60 --graceful-timeout=30 --max-requests=1000 --max-requests-jitter=100"
+# Expose port (default 8000)
+EXPOSE 8000
 
-CMD ["gunicorn", "main:app"]
+# Run with uvicorn
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
