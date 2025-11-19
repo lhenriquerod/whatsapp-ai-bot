@@ -19,14 +19,14 @@ try:
             print(f"  - {key}")
     else:
         print("Tabela vazia. Vou tentar consultar o schema...")
-        
+
         # Alternativa: tentar inserir e ver o erro
         print("\nTentando inserir para descobrir campos obrigatórios...")
         try:
             _client.table("mensagens").insert({}).execute()
         except Exception as e:
             print(f"Erro (esperado): {e}")
-            
+
 except Exception as e:
     print(f"Erro: {e}")
 

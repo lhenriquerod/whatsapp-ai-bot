@@ -20,7 +20,7 @@ print()
 
 # Verificar qual é o nome cadastrado
 print("1. Verificando nome cadastrado na conversa...")
-conv = _client.table("conversas").select("contact_name").eq("user_id", USER_ID).eq("external_contact_id", EXTERNAL_CONTACT).execute()
+conv = _client.table("conversations").select("contact_name").eq("user_id", USER_ID).eq("external_contact_id", EXTERNAL_CONTACT).execute()
 
 if conv.data:
     contact_name = conv.data[0].get('contact_name')
@@ -60,7 +60,7 @@ if response.status_code == 200:
         print(f"✅ SUCESSO! O agente mencionou o nome '{contact_name}'")
     else:
         print(f"❌ O agente NÃO mencionou o nome '{contact_name}'")
-        print(f"   Esperado: Nome cadastrado na tabela conversas")
+        print(f"   Esperado: Nome cadastrado na tabela conversations")
 else:
     print(f"❌ Erro {response.status_code}: {response.text}")
 

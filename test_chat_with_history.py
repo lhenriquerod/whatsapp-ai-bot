@@ -34,8 +34,8 @@ else:
 
 print()
 
-# STEP 2: Adicionar mensagens ao histórico
-print("2. Adicionando mensagens ao histórico...")
+# STEP 2: Adicionar messages ao histórico
+print("2. Adicionando messages ao histórico...")
 
 messages = [
     {"direction": "inbound", "type": "user", "text": "Oi, meu nome é Maria"},

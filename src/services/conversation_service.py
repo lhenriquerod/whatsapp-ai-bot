@@ -30,8 +30,8 @@ async def upsert_conversation(request: ConversationUpsertRequest) -> tuple[str, 
         logger.info(f"Upserting conversation for user_id={request.user_id}, contact={request.external_contact_id}")
         
         # Check if conversation exists
-        existing = _client.table("conversas") \
-            .select("id, status, contact_name, titulo") \
+        existing = _client.table("conversations") \
+            .select("id, status, contact_name, title") \
             .eq("user_id", request.user_id) \
             .eq("external_contact_id", request.external_contact_id) \
             .execute()
@@ -46,30 +46,22 @@ async def upsert_conversation(request: ConversationUpsertRequest) -> tuple[str, 
             # Prepare updates
             updates: Dict[str, Any] = {"updated_at": datetime.utcnow().isoformat()}
             
-            # Mapear status da API (inglês) para BD (português)
-            # API: open, closed, archived → BD: ativa, finalizada, arquivada
-            status_map = {
-                "open": "ativa",
-                "closed": "finalizada",
-                "archived": "arquivada",
-                "pending": "pendente",
-                "cancelled": "cancelada"
-            }
-            db_status = status_map.get(request.status, request.status)
+            # Status já está em inglês no banco: open, closed, archived
+            # Não precisa mais de mapeamento
             
             # Update contact_name if provided and different
             if request.contact_name and request.contact_name != conversation.get("contact_name"):
                 updates["contact_name"] = request.contact_name
-                # Também atualizar titulo para compatibilidade
-                updates["titulo"] = request.contact_name
+                # Também atualizar title para compatibilidade
+                updates["title"] = request.contact_name
             
             # Update status if provided and different
-            if db_status and db_status != conversation.get("status"):
-                updates["status"] = db_status
+            if request.status and request.status != conversation.get("status"):
+                updates["status"] = request.status
             
             # Only update if there are changes beyond updated_at
             if len(updates) > 1:
-                _client.table("conversas") \
+                _client.table("conversations") \
                     .update(updates) \
                     .eq("id", conversation_id) \
                     .execute()
@@ -80,33 +72,24 @@ async def upsert_conversation(request: ConversationUpsertRequest) -> tuple[str, 
         
         else:
             # Conversation doesn't exist - create new
-            iniciada_em = None
+            started_at = None
             if request.started_at_ts:
-                iniciada_em = datetime.utcfromtimestamp(request.started_at_ts).isoformat()
+                started_at = datetime.utcfromtimestamp(request.started_at_ts).isoformat()
             
-            # Mapear status: API (inglês) → BD (português)
-            status_map = {
-                "open": "ativa",
-                "closed": "finalizada",
-                "archived": "arquivada",
-                "pending": "pendente",
-                "cancelled": "cancelada"
-            }
-            db_status = status_map.get(request.status, "ativa")
-            
+            # Status já está em inglês: open, closed, archived
             new_conversation = {
                 "user_id": request.user_id,
                 "external_contact_id": request.external_contact_id,
                 "contact_name": request.contact_name,
-                "titulo": request.contact_name or "Sem título",
-                "canal": request.source,  # Corrigido: usar 'canal' em vez de 'source'
-                "status": db_status,
+                "title": request.contact_name or "Untitled",
+                "canal": request.source,  # TODO: Será 'channel' após migração SQL completa
+                "status": request.status or "open",
             }
             
-            if iniciada_em:
-                new_conversation["iniciada_em"] = iniciada_em
+            if started_at:
+                new_conversation["started_at"] = started_at
             
-            result = _client.table("conversas") \
+            result = _client.table("conversations") \
                 .insert(new_conversation) \
                 .execute()
             
@@ -135,7 +118,7 @@ async def get_conversation_by_contact(user_id: str, external_contact_id: str) ->
         Conversation ID if found, None otherwise
     """
     try:
-        result = _client.table("conversas") \
+        result = _client.table("conversations") \
             .select("id") \
             .eq("user_id", user_id) \
             .eq("external_contact_id", external_contact_id) \

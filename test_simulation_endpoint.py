@@ -7,8 +7,8 @@ import json
 # Base URL
 BASE_URL = "http://localhost:8000"
 
-# User ID real do banco (obtido de list_users.py)
-USER_ID = "6bf0dab0-e895-4730-b5fa-cd8acff6de0c"
+# User ID com credenciais e base de conhecimento cadastrada
+USER_ID = "e35af3a4-a7e6-422f-a483-bbcfc9d7c24f"
 
 def test_simulation_chat():
     """Test simulation chat endpoint"""

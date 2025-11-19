@@ -1,6 +1,6 @@
 """
 Teste: Histórico de Conversa
-Testa se o agente consegue acessar o histórico de mensagens
+Testa se o agente consegue acessar o histórico de messages
 """
 import sys
 sys.path.insert(0, '.')
@@ -22,7 +22,7 @@ print()
 print("1. Buscando/criando conversa...")
 try:
     # Buscar conversa existente primeiro
-    conv_check = _client.table("conversas") \
+    conv_check = _client.table("conversations") \
         .select("id") \
         .eq("user_id", USER_ID) \
         .eq("external_contact_id", EXTERNAL_CONTACT) \
@@ -30,7 +30,7 @@ try:
     
     if not conv_check.data:
         # Criar nova
-        conv_result = _client.table("conversas").insert({
+        conv_result = _client.table("conversations").insert({
             "user_id": USER_ID,
             "external_contact_id": EXTERNAL_CONTACT,
             "contact_name": "Teste Simulação",
@@ -51,38 +51,38 @@ except Exception as e:
 print()
 
 # =====================================================================
-# STEP 2: Limpar mensagens antigas desta conversa
+# STEP 2: Limpar old messages desta conversa
 # =====================================================================
-print("2. Limpando mensagens antigas...")
+print("2. Limpando old messages...")
 try:
-    _client.table("mensagens").delete().eq("conversa_id", conversation_id).execute()
+    _client.table("messages").delete().eq("conversation_id", conversation_id).execute()
     print("✅ Mensagens antigas removidas")
 except Exception as e:
     print(f"⚠️  Erro: {e}")
 print()
 
 # =====================================================================
-# STEP 3: Inserir mensagens de exemplo
+# STEP 3: Inserir messages de exemplo
 # =====================================================================
-print("3. Inserindo mensagens de exemplo...")
+print("3. Inserindo messages de exemplo...")
 
-mensagens = [
-    {"direction": "incoming", "tipo": "usuario", "text": "Olá, meu nome é Lucas"},
-    {"direction": "outgoing", "tipo": "agente", "text": "Olá Lucas! Prazer em conhecê-lo. Como posso ajudar?"},
-    {"direction": "incoming", "tipo": "usuario", "text": "Quais planos vocês têm?"},
-    {"direction": "outgoing", "tipo": "agente", "text": "Temos o Plano Essencial por R$ 260/mês..."},
+messages = [
+    {"direction": "incoming", "type": "user", "text": "Olá, meu nome é Lucas"},
+    {"direction": "outgoing", "type": "agent", "text": "Olá Lucas! Prazer em conhecê-lo. Como posso ajudar?"},
+    {"direction": "incoming", "type": "user", "text": "Quais planos vocês têm?"},
+    {"direction": "outgoing", "type": "agent", "text": "Temos o Plano Essencial por R$ 260/mês..."},
 ]
 
-for msg in mensagens:
+for msg in messages:
     try:
-        _client.table("mensagens").insert({
-            "conversa_id": conversation_id,
+        _client.table("messages").insert({
+            "conversation_id": conversation_id,
             "direction": msg["direction"],
-            "tipo": msg["tipo"],
-            "mensagem": msg["text"],
+            "type": msg["type"],
+            "message": msg["text"],
             "user_id": USER_ID
         }).execute()
-        label = "Usuário" if msg["tipo"] == "usuario" else "Assistente"
+        label = "Usuário" if msg["type"] == "user" else "Assistente"
         print(f"   ✅ {label}: {msg['text'][:30]}...")
     except Exception as e:
         print(f"   ❌ Erro: {e}")
@@ -92,10 +92,10 @@ print()
 # =====================================================================
 # STEP 4: Buscar histórico
 # =====================================================================
-print("4. Buscando histórico de mensagens...")
+print("4. Buscando histórico de messages...")
 history = get_conversation_history(USER_ID, EXTERNAL_CONTACT, limit=10)
 
-print(f"   Encontradas: {len(history)} mensagens")
+print(f"   Encontradas: {len(history)} messages")
 print()
 
 if history:

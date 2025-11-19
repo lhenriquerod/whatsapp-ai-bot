@@ -9,9 +9,9 @@ print("=" * 60)
 
 # Lista completa de valores comuns em sistemas similares
 test_values = [
-    "ativa", "inativa", "suspensa",  # do campo usuarios.status
-    "pendente", "em_andamento", "concluida", "cancelada", "finalizada",
-    "aberta", "fechada", "arquivada",  # tentativas anteriores
+    "open", "inativa", "suspensa",  # do campo usuarios.status
+    "pendente", "em_andamento", "concluida", "cancelada", "closed",
+    "aberta", "fechada", "archived",  # tentativas anteriores
 ]
 
 for test_status in test_values:
@@ -19,16 +19,16 @@ for test_status in test_values:
         test_data = {
             "user_id": "123e4567-e89b-12d3-a456-426614174000",
             "external_contact_id": f"test_{test_status}",
-            "titulo": "Test",
+            "title": "Test",
             "status": test_status,  # FORÇAR o valor em vez de usar default
         }
         
-        result = _client.table("conversas").insert(test_data).execute()
+        result = _client.table("conversations").insert(test_data).execute()
         
         if result.data:
             conv_id = result.data[0]["id"]
             # Sucesso! Vamos limpar
-            _client.table("conversas").delete().eq("id", conv_id).execute()
+            _client.table("conversations").delete().eq("id", conv_id).execute()
             print(f"✅ '{test_status}' - VÁLIDO")
             
     except Exception as e:

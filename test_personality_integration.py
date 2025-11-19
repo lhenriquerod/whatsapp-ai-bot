@@ -32,10 +32,10 @@ print("1. Limpando dados antigos...")
 
 try:
     # Delete old personality
-    _client.table("personalidade_agente").delete().eq("user_id", USER_ID).execute()
+    _client.table("agent_personality").delete().eq("user_id", USER_ID).execute()
     
     # Delete old knowledge base
-    _client.table("base_conhecimento").delete().eq("user_id", USER_ID).execute()
+    _client.table("knowledge_base").delete().eq("user_id", USER_ID).execute()
     
     print("✅ Dados removidos")
 except Exception as e:
@@ -50,15 +50,15 @@ print("2. Inserindo configuração de personalidade...")
 
 personality_data = {
     "user_id": USER_ID,
-    "nome": "RAG-E Assistant",
-    "nivel_personalidade": 7,  # Casual
-    "tom_voz": "amigavel",
-    "forma_tratamento": "voce",
-    "apresentacao_inicial": "Oi! Sou o RAG-E, seu assistente inteligente. Como posso te ajudar hoje? 😊"
+    "name": "RAG-E Assistant",
+    "personality_level": 7,  # Casual
+    "voice_tone": "friendly",
+    "address_form": "you_informal",
+    "initial_message": "Oi! Sou o RAG-E, seu assistente inteligente. Como posso te ajudar hoje? 😊"
 }
 
 try:
-    result = _client.table("personalidade_agente").insert(personality_data).execute()
+    result = _client.table("agent_personality").insert(personality_data).execute()
     print("✅ Personalidade inserida")
     print(f"   - Nome: {personality_data['nome']}")
     print(f"   - Nível: {personality_data['nivel_personalidade']} (Casual)")
@@ -79,30 +79,30 @@ knowledge_items = [
     # Product with multiple plans
     {
         "user_id": USER_ID,
-        "categoria": "produto",
-        "dados": {
-            "nome": "RAG-E",
+        "category": "product",
+        "data": {
+            "name": "RAG-E",
             "tipo_produto": "assinatura_multiplos_planos",
-            "descricao": "Plataforma de atendimento inteligente com IA para automatizar conversas via WhatsApp e web",
-            "categoria": "Software",
+            "descricao": "Plataforma de atendimento inteligente com IA para automatizar conversations via WhatsApp e web",
+            "category": "Software",
             "planos": [
                 {
-                    "nome": "Essencial",
+                    "name": "Essencial",
                     "preco_mensal": "260",
                     "preco_anual": "2600",
                     "desconto_anual": "2 meses Grátis",
                     "beneficios": [
-                        "Atendimento com IA por mensagens de texto",
+                        "Atendimento com IA por messages de texto",
                         "Base de conhecimento personalizada",
                         "Integração WhatsApp",
                         "Painel web completo"
                     ],
                     "limite_usuarios": "5 usuários",
-                    "limite_conversas": "1000 conversas/mês",
+                    "limite_conversations": "1000 conversations/mês",
                     "ideal_para": "Pequenos negócios"
                 },
                 {
-                    "nome": "Profissional",
+                    "name": "Profissional",
                     "preco_mensal": "520",
                     "preco_anual": "5200",
                     "desconto_anual": "2 meses Grátis",
@@ -113,7 +113,7 @@ knowledge_items = [
                         "Suporte prioritário"
                     ],
                     "limite_usuarios": "15 usuários",
-                    "limite_conversas": "5000 conversas/mês",
+                    "limite_conversations": "5000 conversations/mês",
                     "ideal_para": "Médias empresas"
                 }
             ]
@@ -122,8 +122,8 @@ knowledge_items = [
     # FAQ
     {
         "user_id": USER_ID,
-        "categoria": "faq",
-        "dados": {
+        "category": "faq",
+        "data": {
             "pergunta": "Qual o horário de atendimento?",
             "resposta": "Nosso time está disponível de segunda a sexta, das 9h às 18h. Fora desse horário, o assistente virtual continua funcionando 24/7!",
             "categoria_faq": "Atendimento"
@@ -132,10 +132,10 @@ knowledge_items = [
     # Company info
     {
         "user_id": USER_ID,
-        "categoria": "empresa",
-        "dados": {
-            "tipo": "Sobre a empresa",
-            "titulo": "Nossa Missão",
+        "category": "company",
+        "data": {
+            "type": "Sobre a empresa",
+            "title": "Nossa Missão",
             "descricao": "Revolucionar o atendimento ao cliente através de IA acessível e personalizada",
             "informacoes_adicionais": "Fundada em 2025, já atendemos mais de 100 empresas"
         }
@@ -143,7 +143,7 @@ knowledge_items = [
 ]
 
 try:
-    result = _client.table("base_conhecimento").insert(knowledge_items).execute()
+    result = _client.table("knowledge_base").insert(knowledge_items).execute()
     print(f"✅ {len(knowledge_items)} itens inseridos")
     print("   - 1 produto (RAG-E com 2 planos)")
     print("   - 1 FAQ (horário de atendimento)")
@@ -263,7 +263,7 @@ print("     curl -X POST http://localhost:8000/simulation/chat \\")
 print(f"       -H 'Content-Type: application/json' \\")
 print(f"       -d '{{\"user_id\": \"{USER_ID}\", \"message\": \"Quais planos vocês oferecem?\"}}'")
 print()
-print("  3. Experimente diferentes mensagens:")
+print("  3. Experimente diferentes messages:")
 print("     - 'Qual o horário de atendimento?'")
 print("     - 'Qual a diferença entre os planos?'")
 print("     - 'Me fale sobre a empresa'")

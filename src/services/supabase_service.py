@@ -2,13 +2,13 @@
 Supabase Service
 Provides interface to fetch knowledge base context from Supabase.
 
-This service queries the 'base_conhecimento' table which stores knowledge items
+This service queries the 'knowledge_base' table which stores knowledge items
 in a flexible JSONB structure organized by categories:
-- produto: Products with name, description, price, characteristics
-- servico: Services with name, description, duration, price
-- empresa: Company info with topic and content
+- product: Products with name, description, price, characteristics
+- service: Services with name, description, duration, price
+- company: Company info with topic and content
 - faq: Frequently asked questions with question/answer pairs
-- personalizado: Custom knowledge items with flexible fields
+- custom: Custom knowledge items with flexible fields
 
 The get_context() function formats these items into a readable string
 that is injected into the AI's system prompt for contextual responses.
@@ -36,11 +36,11 @@ def get_context(owner_id: str, fields: str = KB_FIELDS, limit: int = KB_LIMIT) -
     """
     Fetch knowledge base context for a specific owner from Supabase.
     
-    Queries the base_conhecimento table for all active knowledge entries
+    Queries the knowledge_base table for all active knowledge entries
     belonging to the specified user and formats them into a readable context string.
     
     Args:
-        owner_id: User/owner identifier to filter knowledge base (user_id in base_conhecimento)
+        owner_id: User/owner identifier to filter knowledge base (user_id in knowledge_base)
         fields: Comma-separated field names to retrieve (default: from config)
         limit: Maximum number of records to fetch (default: from config)
         
@@ -49,7 +49,7 @@ def get_context(owner_id: str, fields: str = KB_FIELDS, limit: int = KB_LIMIT) -
         
     Example:
         >>> get_context("6bf0dab0-e895-4730-b5fa-cd8acff6de0c")
-        "Base de conhecimento:\\n\\n- FAQ: Pergunta: Qual o horário? | Resposta: 9h às 18h\\n\\n- Produto: Item X | Descrição: ... | Preço: R$ 50"
+        "Knowledge Base:\\n\\n- FAQ: Question: What time? | Answer: 9am to 6pm\\n\\n- Product: Item X | Description: ... | Price: R$ 50"
     """
     try:
         logger.debug("Fetching knowledge base for owner_id=%s", owner_id[-4:] if len(owner_id) > 4 else "***")
@@ -71,37 +71,37 @@ def get_context(owner_id: str, fields: str = KB_FIELDS, limit: int = KB_LIMIT) -
         # Format rows into readable context
         def format_row(row: Dict[str, Any]) -> str:
             """
-            Format a single row from base_conhecimento into readable text.
-            Handles JSONB 'dados' field based on 'categoria'.
+            Format a single row from knowledge_base into readable text.
+            Handles JSONB 'data' field based on 'category'.
             
             Supports multiple product types including products with pricing plans.
             """
-            categoria = row.get("categoria", "").lower()
-            dados = row.get("dados", {})
+            category = row.get("category", "").lower()
+            data = row.get("data", {})
             
-            # If dados is not a dict (edge case), return raw
-            if not isinstance(dados, dict):
-                return f"{categoria.capitalize()}: {str(dados)}"
+            # If data is not a dict (edge case), return raw
+            if not isinstance(data, dict):
+                return f"{category.capitalize()}: {str(data)}"
             
-            # Format based on categoria
-            if categoria == "produto":
-                return format_produto(dados)
+            # Format based on category
+            if category == "product":
+                return format_produto(data)
             
-            elif categoria == "servico":
-                return format_servico(dados)
+            elif category == "service":
+                return format_servico(data)
             
-            elif categoria == "empresa":
-                return format_empresa(dados)
+            elif category == "company":
+                return format_empresa(data)
             
-            elif categoria == "faq":
-                return format_faq(dados)
+            elif category == "faq":
+                return format_faq(data)
             
-            elif categoria == "personalizado":
-                return format_personalizado(dados)
+            elif category == "custom":
+                return format_personalizado(data)
             
             else:
-                # Unknown categoria - just stringify the dados
-                return f"{categoria.capitalize()}: {str(dados)}"
+                # Unknown category - just stringify the data
+                return f"{category.capitalize()}: {str(data)}"
         
         def format_produto(dados: Dict[str, Any]) -> str:
             """Format product data, including products with multiple pricing plans."""
@@ -111,8 +111,10 @@ def get_context(owner_id: str, fields: str = KB_FIELDS, limit: int = KB_LIMIT) -
             nome = dados.get("nome", "Produto sem nome")
             lines.append(f"PRODUTO: {nome}")
             
-            # Basic info
-            if dados.get("categoria"):
+            # Basic info - Include ALL top-level fields
+            if dados.get("categoria_produto"):
+                lines.append(f"Categoria: {dados['categoria_produto']}")
+            elif dados.get("categoria"):
                 lines.append(f"Categoria: {dados['categoria']}")
             
             if dados.get("tipo_produto"):
@@ -128,6 +130,30 @@ def get_context(owner_id: str, fields: str = KB_FIELDS, limit: int = KB_LIMIT) -
             
             if dados.get("descricao"):
                 lines.append(f"Descrição: {dados['descricao']}")
+            
+            # IMPORTANT: Include trial period if exists
+            if dados.get("periodo_trial"):
+                trial = dados['periodo_trial']
+                lines.append(f"Período de teste grátis: {trial} dias")
+            
+            # IMPORTANT: Include payment methods if exists
+            if dados.get("formas_pagamento"):
+                lines.append(f"Formas de pagamento: {dados['formas_pagamento']}")
+            
+            # Include any other top-level fields that are simple values
+            # Skip known complex fields (planos, beneficios, etc.) as they're handled below
+            skip_fields = {
+                "nome", "categoria", "categoria_produto", "tipo_produto", "descricao",
+                "periodo_trial", "formas_pagamento", "planos", "beneficios",
+                "preco_mensal", "preco_anual", "desconto_anual", "preco",
+                "caracteristicas", "itens_inclusos", "limite_usuarios", "limite_conversas", "ideal_para"
+            }
+            
+            for key, value in dados.items():
+                if key not in skip_fields and value and isinstance(value, (str, int, float, bool)):
+                    # Format key (convert snake_case to Title Case)
+                    formatted_key = key.replace('_', ' ').title()
+                    lines.append(f"{formatted_key}: {value}")
             
             # Handle different pricing structures
             tipo_produto = dados.get("tipo_produto", "")
@@ -161,6 +187,16 @@ def get_context(owner_id: str, fields: str = KB_FIELDS, limit: int = KB_LIMIT) -
                     
                     if plano.get("ideal_para"):
                         lines.append(f"  Ideal para: {plano['ideal_para']}")
+                    
+                    # Include any other plan-specific fields
+                    plan_skip_fields = {
+                        "nome", "preco_mensal", "preco_anual", "desconto_anual",
+                        "beneficios", "limite_usuarios", "limite_conversas", "ideal_para"
+                    }
+                    for key, value in plano.items():
+                        if key not in plan_skip_fields and value and isinstance(value, (str, int, float, bool)):
+                            formatted_key = key.replace('_', ' ').title()
+                            lines.append(f"  {formatted_key}: {value}")
                     
                     lines.append("")  # Blank line between plans
             

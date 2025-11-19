@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 def get_user_config(user_id: str) -> Optional[Dict[str, Any]]:
     """
-    Fetch user configuration from configuracao_empresa table.
+    Fetch user configuration from company_settings table.
     
     Args:
         user_id: User UUID
@@ -22,11 +22,11 @@ def get_user_config(user_id: str) -> Optional[Dict[str, Any]]:
         
     Example:
         >>> config = get_user_config("uuid-here")
-        >>> print(config.get("tom_voz"))
-        "amigavel"
+        >>> print(config.get("voice_tone"))
+        "friendly"
     """
     try:
-        result = _client.table("configuracao_empresa") \
+        result = _client.table("company_settings") \
             .select("*") \
             .eq("user_id", user_id) \
             .execute()
@@ -48,7 +48,7 @@ def build_system_prompt(context: str, user_config: Optional[Dict[str, Any]] = No
     
     Args:
         context: Knowledge base context
-        user_config: Optional user configuration from configuracao_empresa
+        user_config: Optional user configuration from company_settings
         
     Returns:
         System prompt string

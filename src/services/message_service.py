@@ -41,7 +41,7 @@ def get_conversation_history(
     """
     try:
         # First, find the conversation_id and contact_name
-        conv_result = _client.table("conversas") \
+        conv_result = _client.table("conversations") \
             .select("id, contact_name") \
             .eq("user_id", user_id) \
             .eq("external_contact_id", external_contact_id) \
@@ -55,9 +55,9 @@ def get_conversation_history(
         contact_name = conv_result.data[0].get('contact_name')
         
         # Then, fetch messages for that conversation
-        result = _client.table("mensagens") \
-            .select("direction, mensagem, timestamp") \
-            .eq("conversa_id", conversation_id) \
+        result = _client.table("messages") \
+            .select("direction, message, timestamp") \
+            .eq("conversation_id", conversation_id) \
             .order("timestamp", desc=False) \
             .limit(limit) \
             .execute()
@@ -94,7 +94,7 @@ async def create_message(request: MessageCreateRequest) -> tuple[str, str]:
         
         if conversation_id:
             # Verify conversation exists
-            result = _client.table("conversas") \
+            result = _client.table("conversations") \
                 .select("id") \
                 .eq("id", conversation_id) \
                 .execute()
@@ -130,17 +130,16 @@ async def create_message(request: MessageCreateRequest) -> tuple[str, str]:
         if request.timestamp_ts:
             timestamp = datetime.utcfromtimestamp(request.timestamp_ts).isoformat()
         
-        # Mapear type para tipo (usuario/agente)
-        db_tipo = {
-            "user": "usuario",
-            "assistant": "agente",
-            "system": "agente"
-        }.get(request.type, "usuario")
+        # Mapear type para tipo em inglês (user/agent/system)
+        # Agora o banco usa inglês também
+        db_type = request.type  # Já está em inglês (user/assistant/system)
+        if request.type == "assistant":
+            db_type = "agent"  # Normalizar assistant → agent
         
         message_data = {
-            "conversa_id": conversation_id,  # Nome correto da coluna
-            "tipo": db_tipo,  # Mapear para usuario/agente
-            "mensagem": request.text,  # Nome correto da coluna
+            "conversation_id": conversation_id,  # Nome em inglês
+            "type": db_type,  # user/agent/system
+            "message": request.text,  # Nome em inglês
             "direction": request.direction,
             "external_contact_id": request.external_contact_id,
             "user_id": request.user_id,  # Adicionar user_id nas mensagens
@@ -153,8 +152,8 @@ async def create_message(request: MessageCreateRequest) -> tuple[str, str]:
             # metadata já é JSONB, não precisa serializar
             message_data["metadata"] = request.metadata
         
-        # Insert message na tabela mensagens
-        result = _client.table("mensagens") \
+        # Insert message na tabela messages
+        result = _client.table("messages") \
             .insert(message_data) \
             .execute()
         

@@ -11,10 +11,10 @@ try:
     test_data = {
         "user_id": "123e4567-e89b-12d3-a456-426614174000",
         "external_contact_id": "test_default_status",
-        "titulo": "Test Default"
+        "title": "Test Default"
     }
     
-    result = _client.table("conversas").insert(test_data).execute()
+    result = _client.table("conversations").insert(test_data).execute()
     
     if result.data:
         status_default = result.data[0].get("status")
@@ -24,7 +24,7 @@ try:
         print(f"Status default aplicado: '{status_default}'")
         
         # Limpar
-        _client.table("conversas").delete().eq("id", conv_id).execute()
+        _client.table("conversations").delete().eq("id", conv_id).execute()
         
         # Agora testar UPDATE com diferentes valores
         print("\nTestando valores através de UPDATE...")
@@ -33,17 +33,17 @@ try:
         test_conv = {
             "user_id": "123e4567-e89b-12d3-a456-426614174000",
             "external_contact_id": "test_update_status",
-            "titulo": "Test Update"
+            "title": "Test Update"
         }
         
-        result = _client.table("conversas").insert(test_conv).execute()
+        result = _client.table("conversations").insert(test_conv).execute()
         conv_id = result.data[0]["id"]
         
-        test_statuses = ["ativa", "inativa", "suspensa", "pendente", "concluida", "cancelada", "em_atendimento", "finalizada"]
+        test_statuses = ["open", "inativa", "suspensa", "pendente", "concluida", "cancelada", "em_atendimento", "closed"]
         
         for test_status in test_statuses:
             try:
-                _client.table("conversas").update({"status": test_status}).eq("id", conv_id).execute()
+                _client.table("conversations").update({"status": test_status}).eq("id", conv_id).execute()
                 print(f"✅ '{test_status}' - VÁLIDO")
             except Exception as e:
                 if "constraint" in str(e).lower():
@@ -52,7 +52,7 @@ try:
                     print(f"❌ '{test_status}' - ERRO: {str(e)[:80]}")
         
         # Limpar
-        _client.table("conversas").delete().eq("id", conv_id).execute()
+        _client.table("conversations").delete().eq("id", conv_id).execute()
         
 except Exception as e:
     print(f"❌ Erro: {e}")

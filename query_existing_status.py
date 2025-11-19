@@ -9,7 +9,7 @@ print("=" * 60)
 
 # 1. Ver quais valores de status já existem na tabela
 try:
-    result = _client.table("conversas").select("status").limit(100).execute()
+    result = _client.table("conversations").select("status").limit(100).execute()
     
     if result.data:
         status_values = set(row.get("status") for row in result.data if row.get("status"))
@@ -41,12 +41,12 @@ for test_status in test_values:
             "titulo": "Test"
         }
         
-        result = _client.table("conversas").insert(test_data).execute()
+        result = _client.table("conversations").insert(test_data).execute()
         
         # Se chegou aqui, o valor é válido! Vamos deletar o teste
         if result.data:
             conv_id = result.data[0]["id"]
-            _client.table("conversas").delete().eq("id", conv_id).execute()
+            _client.table("conversations").delete().eq("id", conv_id).execute()
             print(f"✅ '{test_status}' - VÁLIDO")
         
     except Exception as e:

@@ -45,8 +45,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize AI service
-ai = AIService()
+# Note: AIService is now instantiated per-request with user credentials
+# No global instance needed
 
 
 # Request/Response models
@@ -89,6 +89,7 @@ def generate_agent_reply(
     Generate agent reply using knowledge base context and user configuration.
     
     This function is shared between /chat and /simulation/chat routes.
+    Uses user-specific AI credentials instead of global .env configuration.
     
     Args:
         user_id: User identifier for fetching context and config
@@ -102,17 +103,61 @@ def generate_agent_reply(
     Raises:
         Exception: If context fetching or AI generation fails
     """
-    # Fetch context from Supabase
-    context = get_context(owner_id=user_id)
+    # STEP 1: Fetch user's AI credentials
+    from src.services.ai_credentials_service import get_user_ai_credentials, validate_credentials, get_temperature
     
-    # Fetch agent personality configuration
+    credentials = get_user_ai_credentials(user_id)
+    
+    if not validate_credentials(credentials):
+        logger.error(f"Invalid AI credentials for user_id={user_id[-4:]}")
+        raise Exception("User AI credentials not configured or invalid")
+    
+    # Extract credentials
+    api_key = credentials.get("api_key_encrypted")
+    model = credentials.get("default_model") or "gpt-4o-mini"
+    temperature = get_temperature(credentials, default=0.2)
+    base_url = credentials.get("base_url")
+    organization_id = credentials.get("organization_id")
+    provider = credentials.get("provider", "openai")
+    
+    logger.info(f"Using AI credentials: provider={provider} model={model} temp={temperature}")
+    
+    # STEP 2: Initialize AIService with user's credentials
+    user_ai = AIService(
+        api_key=api_key,
+        base_url=base_url,
+        organization_id=organization_id
+    )
+    
+    # STEP 3: Fetch context from Supabase using vector search (with fallback)
+    # Using hybrid_search: tries vector search first, falls back to original get_context()
+    try:
+        from src.services.vector_search import hybrid_search
+        import asyncio
+        
+        # Run async hybrid_search (vector search with fallback)
+        context = asyncio.run(hybrid_search(
+            user_id=user_id,
+            query=message,  # Use user's message for semantic search
+            top_k=5
+        ))
+        
+        logger.info(f"Retrieved context using hybrid search (vector + fallback)")
+        
+    except Exception as e:
+        logger.warning(f"Hybrid search failed, using original get_context(): {e}")
+        # Fallback to original implementation if vector search fails
+        context = get_context(owner_id=user_id)
+    
+    # STEP 4: Fetch agent personality configuration
     personality = get_agent_personality(user_id)
     
-    # Build system prompt with personality and knowledge base
+    # STEP 5: Build system prompt with personality and knowledge base
     system_prompt = build_system_prompt_with_personality(context, personality)
     
-    # Build user prompt with conversation history if available
+    # STEP 6: Build user prompt with conversation history if available
     user_prompt = message
+    contact_name = None
     
     # If we have external_contact_id, fetch conversation history
     if external_contact_id:
@@ -134,12 +179,14 @@ def generate_agent_reply(
             
             if contact_name:
                 history_context += f"Você está conversando com: {contact_name}\n"
+                # Replace {{contact_name}} placeholder in system prompt
+                system_prompt = system_prompt.replace('{{contact_name}}', contact_name)
             
             if history:
                 history_context += "\n=== HISTÓRICO DE MENSAGENS ===\n"
                 for msg in history:
                     direction = msg.get("direction", "unknown")
-                    msg_text = msg.get("mensagem", "")
+                    msg_text = msg.get("message", "")  # Campo 'message' em inglês
                     
                     if direction == "inbound":  # Mensagem do usuário
                         history_context += f"Usuário: {msg_text}\n"
@@ -154,8 +201,13 @@ def generate_agent_reply(
             # Prepend history to user prompt
             user_prompt = f"{history_context}{message}"
     
-    # Generate AI response
-    reply = ai.generate_response(system_prompt=system_prompt, user_prompt=user_prompt)
+    # STEP 7: Generate AI response using user's credentials
+    reply = user_ai.generate_response(
+        system_prompt=system_prompt, 
+        user_prompt=user_prompt,
+        model=model,
+        temperature=temperature
+    )
     
     # Normalize line breaks for WhatsApp compatibility
     # WhatsApp may need explicit \n characters, ensure they're preserved
@@ -177,6 +229,8 @@ def chat(payload: ChatIn, x_request_id: Optional[str] = Header(default=None)):
     Chat endpoint - receives user message and returns AI-generated response
     based on Supabase knowledge base context.
     
+    Includes automatic name collection flow for new contacts.
+    
     Args:
         payload: ChatIn with user_id and message
         x_request_id: Optional request tracking header
@@ -194,7 +248,28 @@ def chat(payload: ChatIn, x_request_id: Optional[str] = Header(default=None)):
         masked_user = f"***{payload.user_id[-4:]}" if len(payload.user_id) > 4 else "***"
         logger.info("chat_start user=%s request_id=%s", masked_user, x_request_id)
         
-        # Generate reply using shared logic
+        # STEP 1: Check if we need to collect contact name
+        # This handles the name collection flow (AWAITING_NAME, CONFIRMING_NAME states)
+        if payload.external_contact_id:
+            from src.services.name_collection_service import process_name_collection_flow
+            
+            response_text, should_continue_to_ai = process_name_collection_flow(
+                message_text=payload.message,
+                external_contact_id=payload.external_contact_id,
+                user_id=payload.user_id
+            )
+            
+            # If name collection flow handled the message, return its response
+            if not should_continue_to_ai:
+                elapsed_ms = int((time.time() - start) * 1000)
+                logger.info("chat_name_collection user=%s elapsed_ms=%d", masked_user, elapsed_ms)
+                return ChatOut(
+                    reply=response_text,
+                    source="name_collection",
+                    request_id=x_request_id
+                )
+        
+        # STEP 2: Process with AI (name already collected or no external_contact_id)
         result = generate_agent_reply(
             user_id=payload.user_id,
             message=payload.message,
@@ -357,6 +432,145 @@ async def create_message(payload: MessageCreateRequest):
     except Exception as e:
         logger.exception(f"Error in create_message: {e}")
         raise HTTPException(status_code=500, detail="internal_error")
+
+
+# ============================================================================
+# Knowledge Processing Endpoints (RAG with Vector Embeddings)
+# ============================================================================
+
+class KnowledgeProcessResponse(BaseModel):
+    """Response from knowledge processing endpoint"""
+    message: str
+    knowledge_entries: int
+    chunks_created: int
+    processing_time_ms: int
+
+
+@app.post("/knowledge/process-chunks/{user_id}", response_model=KnowledgeProcessResponse)
+async def process_knowledge_chunks(user_id: str):
+    """
+    Process all knowledge_base entries for a user into chunks with embeddings.
+    
+    This endpoint:
+    1. Fetches all knowledge_base entries for the user
+    2. Splits them into chunks (500 chars with 100 char overlap)
+    3. Generates embeddings using OpenAI
+    4. Stores chunks in knowledge_chunks table
+    
+    Call this after the user creates/updates knowledge base entries.
+    Can be called from frontend or triggered automatically.
+    
+    Args:
+        user_id: User UUID
+        
+    Returns:
+        KnowledgeProcessResponse with processing stats
+        
+    Raises:
+        HTTPException: 500 if processing fails
+    """
+    start = time.time()
+    
+    try:
+        logger.info(f"Processing knowledge chunks for user {user_id[-4:]}")
+        
+        from src.services.supabase_service import _client
+        from src.services.chunking import split_into_chunks, prepare_knowledge_for_chunking
+        from src.services.embeddings import generate_embeddings_batch
+        
+        # 1. Fetch all knowledge_base entries for the user
+        result = _client.table('knowledge_base')\
+            .select('*')\
+            .eq('user_id', user_id)\
+            .execute()
+        
+        knowledge_entries = result.data or []
+        
+        if not knowledge_entries:
+            elapsed_ms = int((time.time() - start) * 1000)
+            logger.info(f"No knowledge entries found for user {user_id[-4:]}")
+            return KnowledgeProcessResponse(
+                message="Nenhuma entrada encontrada na base de conhecimento",
+                knowledge_entries=0,
+                chunks_created=0,
+                processing_time_ms=elapsed_ms
+            )
+        
+        # 2. Delete old chunks for this user (reprocess everything)
+        _client.table('knowledge_chunks')\
+            .delete()\
+            .eq('owner_id', user_id)\
+            .execute()
+        
+        logger.info(f"Cleared old chunks for user {user_id[-4:]}")
+        
+        all_chunks = []
+        
+        # 3. For each knowledge entry, prepare text and split into chunks
+        for entry in knowledge_entries:
+            # Prepare formatted text
+            full_text = prepare_knowledge_for_chunking(entry)
+            
+            # Split into chunks
+            chunks = split_into_chunks(full_text, chunk_size=500, chunk_overlap=100)
+            
+            # Prepare chunk records
+            for chunk_text in chunks:
+                all_chunks.append({
+                    'owner_id': user_id,
+                    'knowledge_id': entry.get('id'),
+                    'category': entry.get('category'),
+                    'source': 'dashboard',
+                    'chunk_text': chunk_text
+                })
+        
+        logger.info(f"Created {len(all_chunks)} chunks from {len(knowledge_entries)} entries")
+        
+        if not all_chunks:
+            elapsed_ms = int((time.time() - start) * 1000)
+            return KnowledgeProcessResponse(
+                message="Nenhum chunk foi criado",
+                knowledge_entries=len(knowledge_entries),
+                chunks_created=0,
+                processing_time_ms=elapsed_ms
+            )
+        
+        # 4. Generate embeddings in batch
+        chunk_texts = [c['chunk_text'] for c in all_chunks]
+        embeddings = await generate_embeddings_batch(chunk_texts)
+        
+        logger.info(f"Generated {len(embeddings)} embeddings")
+        
+        # 5. Add embeddings to chunk records
+        for i, chunk in enumerate(all_chunks):
+            chunk['embedding'] = embeddings[i]
+        
+        # 6. Insert all chunks into knowledge_chunks table
+        _client.table('knowledge_chunks')\
+            .insert(all_chunks)\
+            .execute()
+        
+        elapsed_ms = int((time.time() - start) * 1000)
+        
+        logger.info(
+            f"Processed knowledge for user {user_id[-4:]}: "
+            f"{len(knowledge_entries)} entries → {len(all_chunks)} chunks "
+            f"in {elapsed_ms}ms"
+        )
+        
+        return KnowledgeProcessResponse(
+            message="Chunks processados e embeddings gerados com sucesso",
+            knowledge_entries=len(knowledge_entries),
+            chunks_created=len(all_chunks),
+            processing_time_ms=elapsed_ms
+        )
+        
+    except Exception as e:
+        logger.exception(f"Error processing knowledge chunks: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro ao processar chunks: {str(e)}"
+        )
 
 
 if __name__ == "__main__":

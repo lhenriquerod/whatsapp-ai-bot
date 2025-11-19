@@ -21,7 +21,7 @@ OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
 OPENAI_TEMPERATURE = float(os.getenv("OPENAI_TEMPERATURE", "0.2"))
 
 # Knowledge Base (Supabase table) configuration
-KB_TABLE = os.getenv("KB_TABLE", "base_conhecimento")
+KB_TABLE = os.getenv("KB_TABLE", "knowledge_base")
 KB_OWNER_COL = os.getenv("KB_OWNER_COL", "user_id")
-KB_FIELDS = os.getenv("KB_FIELDS", "categoria,dados")
+KB_FIELDS = os.getenv("KB_FIELDS", "category,data")
 KB_LIMIT = int(os.getenv("KB_LIMIT", "100"))  # Fetch all entries (increased from 10)

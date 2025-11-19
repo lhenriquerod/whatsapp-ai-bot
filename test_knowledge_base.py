@@ -1,5 +1,5 @@
 """
-Script para inserir dados de exemplo na base_conhecimento e testar get_context()
+Script para inserir dados de exemplo na knowledge_base e testar get_context()
 """
 from src.services.supabase_service import _client, get_context
 import json
@@ -8,16 +8,16 @@ import json
 USER_ID = "6bf0dab0-e895-4730-b5fa-cd8acff6de0c"
 
 print("=" * 60)
-print("Inserindo dados de exemplo na base_conhecimento")
+print("Inserindo dados de exemplo na knowledge_base")
 print("=" * 60)
 
 # Dados de exemplo para cada categoria
 exemplos = [
     {
         "user_id": USER_ID,
-        "categoria": "produto",
-        "dados": {
-            "nome": "Notebook Dell Inspiron 15",
+        "category": "product",
+        "data": {
+            "name": "Notebook Dell Inspiron 15",
             "descricao": "Notebook para uso profissional com processador Intel i7",
             "preco": "R$ 3.499,00",
             "caracteristicas": "16GB RAM, SSD 512GB, Tela 15.6 Full HD"
@@ -25,9 +25,9 @@ exemplos = [
     },
     {
         "user_id": USER_ID,
-        "categoria": "produto",
-        "dados": {
-            "nome": "Mouse Logitech MX Master 3",
+        "category": "product",
+        "data": {
+            "name": "Mouse Logitech MX Master 3",
             "descricao": "Mouse ergonômico sem fio para produtividade",
             "preco": "R$ 599,00",
             "caracteristicas": "Bateria recarregável, 7 botões personalizáveis, Bluetooth"
@@ -35,9 +35,9 @@ exemplos = [
     },
     {
         "user_id": USER_ID,
-        "categoria": "servico",
-        "dados": {
-            "nome": "Consultoria em TI",
+        "category": "service",
+        "data": {
+            "name": "Consultoria em TI",
             "descricao": "Consultoria especializada em infraestrutura e cloud",
             "duracao": "Pacotes de 10, 20 ou 40 horas",
             "preco": "A partir de R$ 200/hora"
@@ -45,41 +45,41 @@ exemplos = [
     },
     {
         "user_id": USER_ID,
-        "categoria": "empresa",
-        "dados": {
+        "category": "company",
+        "data": {
             "topico": "Horário de Funcionamento",
             "conteudo": "Atendemos de segunda a sexta, das 9h às 18h. Sábados das 9h às 13h."
         }
     },
     {
         "user_id": USER_ID,
-        "categoria": "empresa",
-        "dados": {
+        "category": "company",
+        "data": {
             "topico": "Formas de Pagamento",
             "conteudo": "Aceitamos Pix, cartão de crédito (até 12x), débito e transferência bancária."
         }
     },
     {
         "user_id": USER_ID,
-        "categoria": "faq",
-        "dados": {
+        "category": "faq",
+        "data": {
             "pergunta": "Qual o prazo de entrega?",
             "resposta": "Para produtos em estoque, entregamos em até 3 dias úteis para a capital e 7 dias para interior."
         }
     },
     {
         "user_id": USER_ID,
-        "categoria": "faq",
-        "dados": {
+        "category": "faq",
+        "data": {
             "pergunta": "Vocês oferecem garantia?",
             "resposta": "Sim! Todos os produtos têm garantia de 12 meses contra defeitos de fabricação."
         }
     },
     {
         "user_id": USER_ID,
-        "categoria": "personalizado",
-        "dados": {
-            "titulo": "Política de Troca",
+        "category": "custom",
+        "data": {
+            "title": "Política de Troca",
             "descricao": "Trocas aceitas em até 7 dias após recebimento, desde que o produto esteja lacrado."
         }
     }
@@ -88,13 +88,13 @@ exemplos = [
 try:
     # Limpar registros antigos deste usuário (para testes)
     print("\n1. Limpando registros antigos...")
-    _client.table("base_conhecimento").delete().eq("user_id", USER_ID).execute()
+    _client.table("knowledge_base").delete().eq("user_id", USER_ID).execute()
     print("✅ Registros antigos removidos")
     
     # Inserir novos registros
     print("\n2. Inserindo novos registros...")
     for i, exemplo in enumerate(exemplos, 1):
-        result = _client.table("base_conhecimento").insert(exemplo).execute()
+        result = _client.table("knowledge_base").insert(exemplo).execute()
         if result.data:
             print(f"✅ {i}/{len(exemplos)} - {exemplo['categoria']}: {exemplo['dados'].get('nome') or exemplo['dados'].get('topico') or exemplo['dados'].get('pergunta', 'Item')}")
     

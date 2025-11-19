@@ -13,30 +13,30 @@ print("=" * 70)
 # Produto RAG-E com estrutura completa de planos
 produto_rage = {
     "user_id": USER_ID,
-    "categoria": "produto",
-    "dados": {
-        "nome": "RAG-E",
+    "category": "product",
+    "data": {
+        "name": "RAG-E",
         "tipo_produto": "assinatura_multiplos_planos",
-        "descricao": "Plataforma de atendimento inteligente com IA para automatizar conversas via WhatsApp e web",
-        "categoria": "Software",
+        "descricao": "Plataforma de atendimento inteligente com IA para automatizar conversations via WhatsApp e web",
+        "category": "Software",
         "planos": [
             {
-                "nome": "Essencial",
+                "name": "Essencial",
                 "preco_mensal": "260",
                 "preco_anual": "2600",
                 "desconto_anual": "2 meses Grátis",
                 "beneficios": [
-                    "Atendimento com IA por mensagens de texto (WhatsApp + painel web)",
+                    "Atendimento com IA por messages de texto (WhatsApp + painel web)",
                     "Respostas baseadas na base de conhecimento cadastrada pelo cliente",
                     "Cadastro e organização de conteúdos (produtos, serviços, FAQs, empresas, etc.)",
                     "Configuração da personalidade e estilo de resposta do assistente"
                 ],
                 "limite_usuarios": "5 usuários",
-                "limite_conversas": "1000 conversas/mês",
+                "limite_conversations": "1000 conversations/mês",
                 "ideal_para": "Pequenos negócios e startups"
             },
             {
-                "nome": "Profissional",
+                "name": "Profissional",
                 "preco_mensal": "520",
                 "preco_anual": "5200",
                 "desconto_anual": "2 meses Grátis",
@@ -48,24 +48,24 @@ produto_rage = {
                     "Personalização avançada do agente"
                 ],
                 "limite_usuarios": "15 usuários",
-                "limite_conversas": "5000 conversas/mês",
+                "limite_conversations": "5000 conversations/mês",
                 "ideal_para": "Médias empresas em crescimento"
             },
             {
-                "nome": "Enterprise",
+                "name": "Enterprise",
                 "preco_mensal": "1200",
                 "preco_anual": "12000",
                 "desconto_anual": "2 meses Grátis + Onboarding dedicado",
                 "beneficios": [
                     "Todos os benefícios do plano Profissional",
-                    "Usuários e conversas ilimitados",
+                    "Usuários e conversations ilimitados",
                     "Integração com CRM e ferramentas empresariais",
                     "API dedicada para integrações customizadas",
                     "Gerente de conta dedicado",
                     "SLA garantido de 99,9%"
                 ],
                 "limite_usuarios": "Ilimitado",
-                "limite_conversas": "Ilimitado",
+                "limite_conversations": "Ilimitado",
                 "ideal_para": "Grandes empresas e corporações"
             }
         ]
@@ -75,8 +75,8 @@ produto_rage = {
 # FAQ relacionado
 faq_preco = {
     "user_id": USER_ID,
-    "categoria": "faq",
-    "dados": {
+    "category": "faq",
+    "data": {
         "pergunta": "Como funciona a cobrança anual?",
         "resposta": "No pagamento anual você ganha 2 meses grátis, pagando apenas 10 meses. O valor é cobrado à vista no início do período."
     }
@@ -84,8 +84,8 @@ faq_preco = {
 
 faq_upgrade = {
     "user_id": USER_ID,
-    "categoria": "faq",
-    "dados": {
+    "category": "faq",
+    "data": {
         "pergunta": "Posso fazer upgrade do plano depois?",
         "resposta": "Sim! Você pode fazer upgrade a qualquer momento. O valor será ajustado proporcionalmente ao tempo restante do seu período de cobrança."
     }
@@ -94,8 +94,8 @@ faq_upgrade = {
 # Info da empresa
 info_suporte = {
     "user_id": USER_ID,
-    "categoria": "empresa",
-    "dados": {
+    "category": "company",
+    "data": {
         "topico": "Suporte e Atendimento",
         "conteudo": "Nossa equipe de suporte está disponível de segunda a sexta, das 9h às 18h. Clientes Enterprise têm suporte 24/7."
     }
@@ -104,7 +104,7 @@ info_suporte = {
 try:
     # Limpar registros antigos
     print("\n1. Limpando registros antigos...")
-    _client.table("base_conhecimento").delete().eq("user_id", USER_ID).execute()
+    _client.table("knowledge_base").delete().eq("user_id", USER_ID).execute()
     print("✅ Registros removidos")
     
     # Inserir novo conteúdo
@@ -118,7 +118,7 @@ try:
     ]
     
     for nome, item in items:
-        result = _client.table("base_conhecimento").insert(item).execute()
+        result = _client.table("knowledge_base").insert(item).execute()
         if result.data:
             print(f"✅ {nome}")
     

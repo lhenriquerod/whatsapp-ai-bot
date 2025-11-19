@@ -10,47 +10,47 @@ from src.services.supabase_service import _client
 logger = logging.getLogger(__name__)
 
 # Personality level mapping
-NIVEIS_PERSONALIDADE = {
-    1: "Extremamente formal",
+PERSONALITY_LEVELS = {
+    1: "Extremely formal",
     2: "Formal",
-    3: "Levemente formal",
-    4: "Equilibrado tendendo ao formal",
-    5: "Equilibrado (profissional e amigável)",
-    6: "Equilibrado tendendo ao casual",
+    3: "Slightly formal",
+    4: "Balanced towards formal",
+    5: "Balanced (professional and friendly)",
+    6: "Balanced towards casual",
     7: "Casual",
-    8: "Animado e entusiasmado",
-    9: "Muito entusiasmado",
-    10: "Técnico e especialista"
+    8: "Excited and enthusiastic",
+    9: "Very enthusiastic",
+    10: "Technical and expert"
 }
 
 # Voice tone instructions
-TOM_VOZ_INSTRUCOES = {
-    "formal": "Use linguagem formal, evite gírias e contrações",
-    "amigavel": "Use tom conversacional, seja caloroso e acessível",
-    "objetivo": "Seja direto e conciso, foque nos fatos",
-    "descontraido": "Use linguagem casual, gírias são bem-vindas"
+VOICE_TONE_INSTRUCTIONS = {
+    "formal": "Use formal language, avoid slang and contractions",
+    "friendly": "Use conversational tone, be warm and accessible",
+    "objective": "Be direct and concise, focus on facts",
+    "casual": "Use casual language, slang is welcome"
 }
 
 # Treatment form instructions
-FORMA_TRATAMENTO_INSTRUCOES = {
-    "voce": "Trate o cliente por 'você'",
-    "senhor": "Trate o cliente por 'senhor' ou 'senhora'",
-    "informal": "Use tratamento informal como 'tu' se apropriado"
+ADDRESS_FORM_INSTRUCTIONS = {
+    "you_informal": "Address customer informally (você)",
+    "you_formal": "Address customer formally (senhor/senhora)",
+    "sir_madam": "Use informal treatment like 'tu' if appropriate"
 }
 
 # Default personality fallback
 DEFAULT_PERSONALITY = {
-    "nome": "Assistente Virtual",
-    "nivel_personalidade": 5,
-    "tom_voz": "amigavel",
-    "forma_tratamento": "voce",
-    "apresentacao_inicial": "Olá! Como posso ajudar?"
+    "name": "Virtual Assistant",
+    "personality_level": 5,
+    "voice_tone": "friendly",
+    "address_form": "you_informal",
+    "initial_message": "Hello! How can I help you?"
 }
 
 
 def get_agent_personality(user_id: str) -> Dict[str, Any]:
     """
-    Fetch agent personality configuration from personalidade_agente table.
+    Fetch agent personality configuration from agent_personality table.
     
     Args:
         user_id: User UUID
@@ -59,19 +59,19 @@ def get_agent_personality(user_id: str) -> Dict[str, Any]:
         Dictionary with personality configuration. Returns default values if not found.
         
     Keys returned:
-        - nome: Agent name
-        - nivel_personalidade: Personality level (1-10)
-        - tom_voz: Voice tone (formal|amigavel|objetivo|descontraido)
-        - forma_tratamento: Treatment form (voce|senhor|informal)
-        - apresentacao_inicial: Initial greeting message
+        - name: Agent name
+        - personality_level: Personality level (1-10)
+        - voice_tone: Voice tone (formal|friendly|objective|casual)
+        - address_form: Treatment form (you_informal|you_formal|sir_madam)
+        - initial_message: Initial greeting message
         
     Example:
         >>> personality = get_agent_personality("uuid-here")
-        >>> print(personality["nome"])
+        >>> print(personality["name"])
         "RAG-E Assistant"
     """
     try:
-        result = _client.table("personalidade_agente") \
+        result = _client.table("agent_personality") \
             .select("*") \
             .eq("user_id", user_id) \
             .single() \
@@ -113,39 +113,39 @@ def format_personality_context(personality: Dict[str, Any]) -> str:
     """
     lines = []
     
-    lines.append("=== PERSONALIDADE DO AGENTE ===")
-    lines.append(f"Nome: {personality.get('nome', 'Assistente Virtual')}")
+    lines.append("=== AGENT PERSONALITY ===")
+    lines.append(f"Name: {personality.get('name', 'Virtual Assistant')}")
     
     # Personality level with description
-    nivel = personality.get("nivel_personalidade", 5)
-    nivel_desc = NIVEIS_PERSONALIDADE.get(nivel, "Equilibrado")
-    lines.append(f"Nível de Personalidade: {nivel} ({nivel_desc})")
+    level = personality.get("personality_level", 5)
+    level_desc = PERSONALITY_LEVELS.get(level, "Balanced")
+    lines.append(f"Personality Level: {level} ({level_desc})")
     
-    lines.append(f"Tom de Voz: {personality.get('tom_voz', 'amigavel')}")
-    lines.append(f"Forma de Tratamento: {personality.get('forma_tratamento', 'voce')}")
+    lines.append(f"Voice Tone: {personality.get('voice_tone', 'friendly')}")
+    lines.append(f"Address Form: {personality.get('address_form', 'you_informal')}")
     
     # Initial greeting
-    apresentacao = personality.get("apresentacao_inicial", "Olá! Como posso ajudar?")
-    lines.append(f"Mensagem Inicial: \"{apresentacao}\"")
+    initial_message = personality.get("initial_message", "Hello! How can I help?")
+    lines.append(f"Initial Message: \"{initial_message}\"")
     lines.append("")
     
     # Behavioral instructions
-    lines.append("Instruções de comportamento:")
+    lines.append("Behavioral Instructions:")
     
-    tom_voz = personality.get("tom_voz", "amigavel")
-    if tom_voz in TOM_VOZ_INSTRUCOES:
-        lines.append(f"- {TOM_VOZ_INSTRUCOES[tom_voz]}")
+    voice_tone = personality.get("voice_tone", "friendly")
+    if voice_tone in VOICE_TONE_INSTRUCTIONS:
+        lines.append(f"- {VOICE_TONE_INSTRUCTIONS[voice_tone]}")
     
-    forma_tratamento = personality.get("forma_tratamento", "voce")
-    if forma_tratamento in FORMA_TRATAMENTO_INSTRUCOES:
-        lines.append(f"- {FORMA_TRATAMENTO_INSTRUCOES[forma_tratamento]}")
+    address_form = personality.get("address_form", "you_informal")
+    if address_form in ADDRESS_FORM_INSTRUCTIONS:
+        lines.append(f"- {ADDRESS_FORM_INSTRUCTIONS[address_form]}")
     
     # Add personality-level specific instructions
-    if nivel <= 3:
-        lines.append("- Mantenha extrema formalidade e distância profissional")
-    elif nivel >= 8:
-        lines.append("- Demonstre entusiasmo e energia nas respostas")
-        lines.append("- Use emojis quando apropriado para transmitir emoção")
+    if level <= 3:
+        lines.append("- Maintain extreme formality and professional distance")
+    elif level >= 8:
+        lines.append("- Show enthusiasm and energy in responses")
+        lines.append("- Use emojis when appropriate to convey emotion")
     
     lines.append("")
     
@@ -184,6 +184,43 @@ def build_system_prompt_with_personality(
         "Se não souber a resposta, seja honesto e ofereça ajuda para entrar em contato com um humano.",
         "Mantenha a personalidade e tom de voz especificados.",
         "Responda sempre em português brasileiro.",
+        "",
+        "=== REGRAS IMPORTANTES SOBRE O FLUXO DE CONVERSA ===",
+        "⚠️ CRÍTICO - LEIA COM ATENÇÃO:",
+        "",
+        "1. RESPEITE O SISTEMA DE PERGUNTAS E RESPOSTAS:",
+        "   - Faça UMA pergunta por vez",
+        "   - Aguarde a resposta do usuário antes de fazer nova pergunta",
+        "   - NÃO envie múltiplas mensagens consecutivas",
+        "   - Se o usuário responder com múltiplas informações, processe uma de cada vez",
+        "",
+        "2. USO DO NOME DO CONTATO:",
+        "   - Sempre que disponível, use o nome do contato para personalizar a conversa",
+        "   - Exemplo: 'Olá, {{contact_name}}! Como posso ajudar?'",
+        "   - Use o nome de forma natural, sem exageros",
+        "",
+        "3. FORMATO DE RESPOSTA:",
+        "   - Mantenha respostas concisas e objetivas",
+        "   - Use no máximo 2-3 parágrafos por mensagem",
+        "   - Se precisar coletar múltiplas informações, faça em etapas separadas",
+        "",
+        "4. EXEMPLO DE FLUXO CORRETO:",
+        "   ✅ CORRETO:",
+        "   Agente: 'Qual tipo de produto você busca?'",
+        "   [AGUARDA RESPOSTA]",
+        "   Usuário: 'Busco um shampoo'",
+        "   Agente: 'Ótimo! Para qual tipo de cabelo?'",
+        "   [AGUARDA RESPOSTA]",
+        "   ",
+        "   ❌ INCORRETO (NÃO FAÇA ISSO):",
+        "   Agente: 'Qual tipo de produto você busca?'",
+        "   Agente: 'Temos várias opções disponíveis!'",
+        "   Agente: 'Posso te ajudar a escolher?'",
+        "",
+        "5. TRATAMENTO DE CONTEXTO:",
+        "   - Use o histórico da conversa para manter contexto",
+        "   - Se o usuário mudar de assunto, adapte-se mas continue respeitando o fluxo",
+        "   - Uma mensagem por interação é a regra de ouro",
         "",
         "=== FORMATAÇÃO DE RESPOSTAS ===",
         "Ao apresentar produtos ou planos:",

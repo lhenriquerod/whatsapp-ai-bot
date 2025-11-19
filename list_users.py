@@ -8,39 +8,41 @@ print("Consultando usuários existentes...")
 print("=" * 60)
 
 try:
-    # Listar usuários da tabela usuarios (campos do RELATORIO_ESTRUTURA_BD.md)
-    result = _client.table("usuarios").select("id, nome, telefone, plano, status").limit(5).execute()
+    # List users from the `users` table (actual fields: full_name, email, phone, plan, status, is_admin, etc.)
+    result = _client.table("users").select("id, full_name, email, phone, plan, status").limit(5).execute()
     
     if result.data and len(result.data) > 0:
-        print(f"\n✅ Encontrados {len(result.data)} usuários:")
+        print(f"\n✅ Found {len(result.data)} users:")
         for user in result.data:
             print(f"   - ID: {user['id']}")
-            print(f"     Nome: {user.get('nome', 'N/A')}")
-            print(f"     Telefone: {user.get('telefone', 'N/A')}")
-            print(f"     Plano: {user.get('plano', 'N/A')}")
+            print(f"     Name: {user.get('full_name', 'N/A')}")
+            print(f"     Email: {user.get('email', 'N/A')}")
+            print(f"     Phone: {user.get('phone', 'N/A')}")
+            print(f"     Plan: {user.get('plan', 'N/A')}")
+            print(f"     Status: {user.get('status', 'N/A')}")
             print()
         
-        # Usar o primeiro usuário para teste
+        # Use the first user for quick testing
         first_user_id = result.data[0]['id']
-        print(f"💡 Use este user_id para testes: {first_user_id}")
+        print(f"💡 Use this user_id for tests: {first_user_id}")
         
     else:
-        print("\n⚠️ Nenhum usuário encontrado na tabela 'usuarios'")
-        print("\nVocê precisa:")
-        print("1. Criar um usuário através do Supabase Auth (signup)")
-        print("2. Ou criar diretamente na tabela usuarios (se permitido)")
+        print("\n⚠️ No users found in the 'users' table")
+        print("\nYou need to:")
+        print("1. Create a user through Supabase Auth (signup)")
+        print("2. Or insert directly into the 'users' table (if allowed)")
         
 except Exception as e:
-    print(f"\n❌ Erro ao consultar usuários: {e}")
-    print("\nTentando consultar auth.users...")
+    print(f"\n❌ Error querying users: {e}")
+    print("\nTrying to query auth.users...")
     
     try:
-        # Algumas instalações podem ter acesso direto ao auth.users
+        # Some setups may have direct access to auth.users
         result = _client.rpc('get_auth_users').execute()
         print(result.data)
     except:
-        print("❌ Não foi possível acessar auth.users diretamente")
-        print("\n💡 Solução: Crie um usuário através do Supabase Dashboard")
+        print("❌ Could not access auth.users directly")
+        print("\n💡 Solution: Create a user through Supabase Dashboard")
         print("   Authentication → Users → Add user")
 
 print("\n" + "=" * 60)
